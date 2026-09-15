@@ -223,19 +223,18 @@ impl SecureEnclave {
         let mut entropy = Vec::new();
 
         // Hostname
-        if let Ok(hostname) = std::env::var("COMPUTERNAME")
+        let hostname = std::env::var("COMPUTERNAME")
             .or_else(|_| std::env::var("HOSTNAME"))
-            .or_else(|_| {
-                #[cfg(unix)]
-                {
-                    std::fs::read_to_string("/etc/hostname").map(|s| s.trim().to_string())
-                }
-                #[cfg(not(unix))]
-                {
-                    Err(std::env::VarError::NotPresent)
-                }
-            })
-        {
+            .ok();
+
+        #[cfg(unix)]
+        let hostname = hostname.or_else(|| {
+            std::fs::read_to_string("/etc/hostname")
+                .ok()
+                .map(|s| s.trim().to_string())
+        });
+
+        if let Some(hostname) = hostname {
             entropy.extend_from_slice(hostname.as_bytes());
         }
 
